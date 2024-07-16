@@ -242,7 +242,7 @@ static void _YYDiskCacheSetGlobal(YYDiskCache *cache) {
             NSError *error = nil;
             NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingFromData:item.value error:&error];
             if (error) {
-                NSLog( @"YYCache unarchiver init failed with error: %@", error);
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"YYDiskCacheUnarchiveErrorNoti" object:nil userInfo:@{@"errorInfo": error}];
             }
             NSAssert(!error, @"YYCache unarchiver init failed");
             unarchiver.requiresSecureCoding = NO;
@@ -251,8 +251,8 @@ static void _YYDiskCacheSetGlobal(YYDiskCache *cache) {
             return data;
         }
         @catch (NSException *exception) {
-            NSLog( @"YYCache unarchiver init failed catch reason: %@", exception.reason);
-            NSAssert(!exception, @"YYCache archived data failed");
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"YYDiskCacheUnarchiveErrorNoti" object:nil userInfo:@{@"errorInfo": exception.reason}];
+            NSAssert(!exception, @"YYCache unarchiver data failed");
         }
     }
     if (object && item.extendedData) {
@@ -289,12 +289,12 @@ static void _YYDiskCacheSetGlobal(YYDiskCache *cache) {
             // 由于没有严格的类型验证，存在潜在的安全风险，特别是在解码过程中，可能会导致对象替换攻击。这在处理来自不受信任来源的数据时尤其需要注意
             value = [NSKeyedArchiver archivedDataWithRootObject:object requiringSecureCoding:NO error:&error];
             if (error) {
-                NSLog( @"YYCache archived data failed with error: %@", error);
+                [[NSNotificationCenter defaultCenter] postNotificationName:@"YYDiskCacheArchiveErrorNoti" object:nil userInfo:@{@"errorInfo": error}];
             }
             NSAssert(!error, @"YYCache archived data failed");
         }
         @catch (NSException *exception) {
-            NSLog( @"YYCache archived data failed catch reason: %@", exception.reason);
+            [[NSNotificationCenter defaultCenter] postNotificationName:@"YYDiskCacheArchiveErrorNoti" object:nil userInfo:@{@"errorInfo": exception.reason}];
             NSAssert(!exception, @"YYCache archived data failed");
         }
     }
