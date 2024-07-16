@@ -239,10 +239,20 @@ static void _YYDiskCacheSetGlobal(YYDiskCache *cache) {
         object = _customUnarchiveBlock(item.value);
     } else {
         @try {
-            object = [NSKeyedUnarchiver unarchiveObjectWithData:item.value];
+            NSError *error = nil;
+            NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingFromData:item.value error:&error];
+            if (error) {
+                NSLog( @"YYCache unarchiver init failed with error: %@", error);
+            }
+            NSAssert(!error, @"YYCache unarchiver init failed");
+            unarchiver.requiresSecureCoding = NO;
+            id data = [unarchiver decodeObjectForKey:NSKeyedArchiveRootObjectKey];
+            [unarchiver finishDecoding];
+            return data;
         }
         @catch (NSException *exception) {
-            // nothing to do...
+            NSLog( @"YYCache unarchiver init failed catch reason: %@", exception.reason);
+            NSAssert(!exception, @"YYCache archived data failed");
         }
     }
     if (object && item.extendedData) {
@@ -274,10 +284,18 @@ static void _YYDiskCacheSetGlobal(YYDiskCache *cache) {
         value = _customArchiveBlock(object);
     } else {
         @try {
-            value = [NSKeyedArchiver archivedDataWithRootObject:object];
+            NSError *error;
+            // requiringSecureCoding:NO 为了兼容旧代码，归档没有遵循NSSecureCoding协议的对象
+            // 由于没有严格的类型验证，存在潜在的安全风险，特别是在解码过程中，可能会导致对象替换攻击。这在处理来自不受信任来源的数据时尤其需要注意
+            value = [NSKeyedArchiver archivedDataWithRootObject:object requiringSecureCoding:NO error:&error];
+            if (error) {
+                NSLog( @"YYCache archived data failed with error: %@", error);
+            }
+            NSAssert(!error, @"YYCache archived data failed");
         }
         @catch (NSException *exception) {
-            // nothing to do...
+            NSLog( @"YYCache archived data failed catch reason: %@", exception.reason);
+            NSAssert(!exception, @"YYCache archived data failed");
         }
     }
     if (!value) return;
